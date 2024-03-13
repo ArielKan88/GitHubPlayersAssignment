@@ -56,6 +56,10 @@ public class ExtractorService implements IExtractorService {
             List<String> columnNamesAccordingToTheirOrderInInsertQuery = new ArrayList<>(csvColumnNameToDbColumnName.keySet());
             var recordsIterator = csvParser.stream().iterator();
 
+            if (!recordsIterator.hasNext()) {
+                log.error("Empty file");
+                throw new IngestException("Empty file", null);
+            }
             var columnNamesRecord = recordsIterator.next(); //these are the headers
             Map<Integer, Integer> csvColumnIndexMappingToQueryIndex = buildCsvColumnIndexMappingToQueryIndex(columnNamesRecord.toList(), columnNamesAccordingToTheirOrderInInsertQuery);
 
