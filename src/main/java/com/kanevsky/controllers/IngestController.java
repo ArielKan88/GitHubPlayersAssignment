@@ -3,7 +3,9 @@ package com.kanevsky.controllers;
 import com.kanevsky.exceptions.IngestException;
 import com.kanevsky.services.IExtractorService;
 import jakarta.servlet.http.HttpServletRequest;
+import com.kanevsky.views.ErrorView;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -18,13 +20,11 @@ public class IngestController {
     private IExtractorService extractorService;
 
     @PostMapping(value = "/", consumes = "application/octet-stream")
-    public @ResponseBody long nothing(HttpServletRequest request) {
+    public @ResponseBody ResponseEntity ingest(HttpServletRequest request) {
         try (var inputStream = request.getInputStream()) {
-            return extractorService.ingestInputStream(inputStream);
-        } catch (IngestException e) {
-            throw new RuntimeException(e);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+            return ResponseEntity.ok(extractorService.ingestInputStream(inputStream));
+        } catch (IngestException | IOException e) {
+            return ResponseEntity.internalServerError().body(new ErrorView(e.getMessage()));
         }
     }
 }

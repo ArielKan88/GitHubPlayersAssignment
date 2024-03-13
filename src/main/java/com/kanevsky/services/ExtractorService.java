@@ -5,6 +5,9 @@ import com.kanevsky.exceptions.IngestException;
 import com.kanevsky.utils.PlayerColumnUtils;
 import com.kanevsky.views.PlayerView;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVRecord;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -15,6 +18,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Types;
@@ -48,14 +52,22 @@ public class ExtractorService implements IExtractorService {
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
              PreparedStatement preparedStatement = jdbcTemplate.getDataSource().getConnection().prepareStatement(insertSql)) {
 
+            CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT);
             List<String> columnNamesAccordingToTheirOrderInInsertQuery = new ArrayList<>(csvColumnNameToDbColumnName.keySet());
-            Map<Integer, Integer> csvColumnIndexMappingToQueryIndex = buildCsvColumnIndexMappingToQueryIndex(reader.readLine(), columnNamesAccordingToTheirOrderInInsertQuery);
+            var recordsIterator = csvParser.stream().iterator();
+
+            var columnNamesRecord = recordsIterator.next(); //these are the headers
+            Map<Integer, Integer> csvColumnIndexMappingToQueryIndex = buildCsvColumnIndexMappingToQueryIndex(columnNamesRecord.toList(), columnNamesAccordingToTheirOrderInInsertQuery);
 
             final Map<String, Integer> dbColumnNameToSQLTypes = PlayerColumnUtils.getColumnSQLTypes();
 
-            String line;
-            while ((line = reader.readLine()) != null) {
-                String[] lineData = line.split(","); // Assuming CSV fields are comma-separated
+            CSVRecord line;
+
+
+
+
+            while ((line = recordsIterator.next()) != null) {
+                String[] lineData = line.values();
                 var dbColumnNamesAccordingToTheirOrderInInsertQuery = new ArrayList<>(csvColumnNameToDbColumnName.values());
                 addLineToPreparedStatement(lineData, csvColumnIndexMappingToQueryIndex, preparedStatement, dbColumnNamesAccordingToTheirOrderInInsertQuery, dbColumnNameToSQLTypes);
                 count++;
@@ -94,8 +106,7 @@ public class ExtractorService implements IExtractorService {
         preparedStatement.addBatch();
     }
 
-    private Map<Integer, Integer> buildCsvColumnIndexMappingToQueryIndex(String headline, List<String> columnNames) {
-        var csvHeadlineColumns = Arrays.asList(headline.split(",")); // Assuming CSV fields are comma-separated
+    private Map<Integer, Integer> buildCsvColumnIndexMappingToQueryIndex(List<String> csvHeadlineColumns, List<String> columnNames) {
         Map<Integer, Integer> result = new HashMap<>();
         for (int queryColumnIndex = 0; queryColumnIndex < columnNames.size(); queryColumnIndex++) {
             String queryColumnName = columnNames.get(queryColumnIndex);
