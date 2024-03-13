@@ -61,12 +61,8 @@ public class ExtractorService implements IExtractorService {
 
             final Map<String, Integer> dbColumnNameToSQLTypes = PlayerColumnUtils.getColumnSQLTypes();
 
-            CSVRecord line;
-
-
-
-
-            while ((line = recordsIterator.next()) != null) {
+            while (recordsIterator.hasNext()) {
+                CSVRecord line = recordsIterator.next();
                 String[] lineData = line.values();
                 var dbColumnNamesAccordingToTheirOrderInInsertQuery = new ArrayList<>(csvColumnNameToDbColumnName.values());
                 addLineToPreparedStatement(lineData, csvColumnIndexMappingToQueryIndex, preparedStatement, dbColumnNamesAccordingToTheirOrderInInsertQuery, dbColumnNameToSQLTypes);
